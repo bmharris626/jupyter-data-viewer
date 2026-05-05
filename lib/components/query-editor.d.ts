@@ -1,6 +1,6 @@
 import React from 'react';
 interface QueryEditorProps {
-    onExecuteQuery: (query: string) => void;
+    onExecuteQuery: (query: string) => Promise<void>;
     isLoading: boolean;
     error?: string;
 }

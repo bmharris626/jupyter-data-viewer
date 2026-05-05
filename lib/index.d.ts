@@ -1,6 +1,3 @@
 import { JupyterFrontEndPlugin } from '@jupyterlab/application';
-/**
- * The main plugin for the data viewer extension.
- */
-declare const main: JupyterFrontEndPlugin<void>;
-export default main;
+declare const plugin: JupyterFrontEndPlugin<void>;
+export default plugin;

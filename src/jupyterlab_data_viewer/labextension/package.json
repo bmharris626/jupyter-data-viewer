@@ -50,6 +50,10 @@
         "name": "jupyterlab-data-viewer",
         "version": "0.1.0"
       }
+    },
+    "_build": {
+      "load": "static/remoteEntry.f5130c8601132ff1ec5a.js",
+      "extension": "./extension"
     }
   }
 }

@@ -14,8 +14,8 @@ npm-debug.log*
 # TypeScript incremental build info
 *.tsbuildinfo
 
-# JupyterLab built labextension (separate from lib/)
-labextension/
+# Top-level labextension build artifacts (not the one bundled in the Python package)
+/labextension/
 
 # Testing
 coverage/

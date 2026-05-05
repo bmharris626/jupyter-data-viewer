@@ -38,3 +38,6 @@ where = ["src"]
 
 [tool.setuptools.package-dir]
 "" = "src"
+
+[tool.setuptools.package-data]
+jupyterlab_data_viewer = ["labextension/**"]
