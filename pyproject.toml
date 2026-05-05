@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "jupyterlab-data-viewer"
+version = "0.1.0"
+description = "JupyterLab extension for viewing and querying data files"
+readme = "README.md"
+license = {text = "BSD-3-Clause"}
+authors = [
+    {name = "JupyterLab Extension Team"},
+]
+classifiers = [
+    "Framework :: Jupyter",
+]
+dependencies = [
+    "jupyterlab>=4.0.0",
+    "jupyter_server>=2.0.0",
+    "pandas>=1.5.0",
+    "pyarrow>=10.0.0",
+    "duckdb>=0.7.0",
+]
+requires-python = ">=3.9"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=6.0",
+    "pytest-cov>=2.10",
+]
+
+[project.urls]
+Homepage = "https://github.com/jupyterlab/jupyterlab-data-viewer"
+Repository = "https://github.com/jupyterlab/jupyterlab-data-viewer"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-dir]
+"" = "src"

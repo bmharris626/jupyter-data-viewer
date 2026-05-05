@@ -1,0 +1,52 @@
+{
+  "name": "jupyterlab-data-viewer",
+  "version": "0.1.0",
+  "description": "JupyterLab extension for viewing and querying data files",
+  "main": "lib/index.js",
+  "files": [
+    "lib/**/*"
+  ],
+  "keywords": [
+    "jupyter",
+    "jupyterlab",
+    "jupyterlab-extension"
+  ],
+  "scripts": {
+    "build": "jlpm build:lib",
+    "build:lib": "tsc -p tsconfig.json",
+    "dev": "jlpm build:lib --watch",
+    "clean": "jlpm clean:lib",
+    "clean:lib": "rm -rf lib",
+    "prepublishOnly": "jlpm build:lib",
+    "test": "jest"
+  },
+  "dependencies": {
+    "@jupyterlab/application": "^4.0.0",
+    "@jupyterlab/apputils": "^4.0.0",
+    "@jupyterlab/filebrowser": "^4.0.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@types/react": "^18.0.28",
+    "@types/react-dom": "^18.0.11",
+    "@typescript-eslint/eslint-plugin": "^5.59.0",
+    "@typescript-eslint/parser": "^5.59.0",
+    "eslint": "^8.39.0",
+    "jest": "^30.3.0",
+    "typescript": "~5.0.0"
+  },
+  "jupyterlab": {
+    "extension": true,
+    "frontend": true,
+    "outputDir": "lib",
+    "discovery": {
+      "server": {
+        "name": "jupyterlab-data-viewer",
+        "version": "0.1.0"
+      }
+    }
+  }
+}
