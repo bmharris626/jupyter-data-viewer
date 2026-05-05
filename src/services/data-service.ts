@@ -1,3 +1,5 @@
+import { PageConfig, URLExt } from '@jupyterlab/coreutils';
+
 interface DataResponse {
   data: Record<string, any>[];
   columns: string[];
@@ -7,8 +9,9 @@ interface DataResponse {
 export class ApiClient {
   private baseUrl: string;
 
-  constructor(baseUrl = '/data-viewer') {
-    this.baseUrl = baseUrl;
+  constructor(baseUrl?: string) {
+    this.baseUrl =
+      baseUrl ?? URLExt.join(PageConfig.getBaseUrl(), 'data-viewer');
   }
 
   async getFileData(path: string): Promise<DataResponse> {

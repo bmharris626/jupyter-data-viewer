@@ -1,13 +1,14 @@
-# JupyterLab Data Viewer
+# JupyterLab Data Viewer Extension
 
-A JupyterLab 4 extension for viewing and querying tabular data files directly in the file browser.
+A JupyterLab 4 extension for viewing and querying tabular data files (CSV, TSV, JSON, Parquet) with a built-in DuckDB SQL engine.
 
 ## Features
 
 - **Multi-format support**: CSV, TSV, JSON, Parquet
-- **SQL query engine**: Execute DuckDB SQL against any loaded file (table alias is `df`)
-- **Sortable table**: Click column headers to sort; nulls sort last
-- **Context menu integration**: Right-click a supported file in the file browser and select "Open with Data Viewer"
+- **SQL query engine**: Run DuckDB SQL against any loaded file; table alias is `df`
+- **Sortable table**: Click column headers; nulls sort last
+- **Context menu**: Right-click a supported file → "Open with Data Viewer"
+- **Column sorting**: Ascending/descending toggle per column
 
 ## Requirements
 
@@ -20,58 +21,37 @@ A JupyterLab 4 extension for viewing and querying tabular data files directly in
 pip install jupyterlab-data-viewer
 ```
 
-## Development
+## Development Setup
+
+All commands run from the repository root:
 
 ```bash
-# Install the Python package in editable mode and link the frontend
 pip install -e .
 jupyter labextension develop . --overwrite
 
-# Build TypeScript → lib/
-jlpm build
-
-# Watch mode (rebuilds on save)
-jlpm dev
+jlpm build       # compile TypeScript once
+jlpm dev         # watch mode
 ```
 
 ## Running Tests
 
 ```bash
-# Frontend (Jest)
+# Frontend unit + integration tests (Jest)
 jlpm test
 
-# Python backend (pytest)
+# Python backend tests (pytest)
 pytest tests/python/
 ```
 
 ## Architecture
 
-The extension uses a standard JupyterLab client-server split:
+Client-server extension following the standard JupyterLab pattern:
 
-**Frontend** (`lib/`, TypeScript/React compiled from `src/`)
-- `index.js` — plugin entry point; registers the command and context menu item
-- `commands.js` — `openFileViewer`: resolves the selected file path and calls the data service
-- `components/data-table.js` — sortable table, capped at 1 000 displayed rows
-- `components/query-editor.js` — SQL textarea; Ctrl+Enter to execute
-- `components/data-viewer-panel.js` — top-level panel composing the table and editor
-- `services/data-service.js` — `ApiClient` (fetch wrapper) and `DataService`
+- **Frontend** (TypeScript/React, compiled to `lib/`): plugin entry point, context menu registration, sortable data table, SQL query editor, fetch-based API client
+- **Backend** (Python, `src/jupyterlab_data_viewer/`): two `jupyter_server` tornado handlers serving `GET /data-viewer/file` and `POST /data-viewer/query`; pandas for file I/O; DuckDB for SQL execution
 
-**Backend** (`src/jupyterlab_data_viewer/`, Python)
-- `handlers.py` — two `jupyter_server` tornado `APIHandler`s:
-  - `GET /data-viewer/file?path=<path>` — read a file and return its data
-  - `POST /data-viewer/query` — execute a DuckDB SQL query against a file
-- `data_viewer.py` — `read_data_file` (pandas dispatch by extension), `execute_sql_query` (DuckDB), `process_paginated_data`
+See the sections below for architecture detail.
 
-**Dependencies**
-| Layer | Libraries |
-|---|---|
-| Frontend | `@jupyterlab/application`, `@jupyterlab/apputils`, `@jupyterlab/filebrowser`, `react`, `react-dom` |
-| Backend | `jupyterlab`, `jupyter_server`, `pandas`, `pyarrow`, `duckdb` |
+## License
 
-## SQL Usage
-
-Queries run against the entire loaded file. The DataFrame is always registered as `df`:
-
-```sql
-SELECT * FROM df WHERE age > 30 ORDER BY name LIMIT 100
-```
+BSD-3-Clause
