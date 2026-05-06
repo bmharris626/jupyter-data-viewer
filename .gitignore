@@ -10,11 +10,17 @@ build/
 # Node
 node_modules/
 npm-debug.log*
+package-lock.json
 
-# TypeScript incremental build info
+# Yarn Berry — don't commit cache/state for a public repo
+.yarn/cache/
+.yarn/install-state.gz
+
+# TypeScript compiled output (intermediate; labextension/ bundle is what ships)
+lib/
 *.tsbuildinfo
 
-# Top-level labextension build artifacts (not the one bundled in the Python package)
+# Top-level labextension build dir (not the one bundled inside the Python package)
 /labextension/
 
 # Testing
