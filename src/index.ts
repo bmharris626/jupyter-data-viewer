@@ -1,37 +1,36 @@
 import { JupyterFrontEnd, JupyterFrontEndPlugin } from '@jupyterlab/application';
-import { ICommandPalette } from '@jupyterlab/apputils';
 import { IFileBrowserFactory } from '@jupyterlab/filebrowser';
-import { openFileViewer } from './commands';
+import { DataViewerFactory } from './commands';
 
 const PLUGIN_ID = 'jupyterlab-data-viewer:plugin';
-const SUPPORTED_EXTENSIONS = ['.csv', '.tsv', '.json', '.parquet'];
 
 const plugin: JupyterFrontEndPlugin<void> = {
   id: PLUGIN_ID,
   autoStart: true,
-  requires: [IFileBrowserFactory, ICommandPalette],
-  activate: (app: JupyterFrontEnd, fileBrowserFactory: IFileBrowserFactory, palette: ICommandPalette) => {
-    app.commands.addCommand('data-viewer:open-file', {
-      label: 'Open with Data Viewer',
-      isVisible: () => {
-        const browser = fileBrowserFactory.tracker.currentWidget;
-        if (!browser) return false;
-        const item = browser.selectedItems().next();
-        if (item.done) return false;
-        const name = (item.value as any).name as string;
-        const ext = name.slice(name.lastIndexOf('.'));
-        return SUPPORTED_EXTENSIONS.includes(ext);
-      },
-      execute: () => openFileViewer(app, fileBrowserFactory)
+  requires: [IFileBrowserFactory],
+  // IFileBrowserFactory is listed as a requirement only to ensure this plugin
+  // activates after the file browser registers its built-in file types (csv,
+  // tsv, json). Without it our factory binds before those types exist.
+  activate: (app: JupyterFrontEnd, _fb: IFileBrowserFactory) => {
+    // Parquet has no built-in JupyterLab file type — register one
+    app.docRegistry.addFileType({
+      name: 'parquet',
+      displayName: 'Parquet File',
+      extensions: ['.parquet'],
+      mimeTypes: ['application/octet-stream'],
+      iconClass: 'jp-MaterialIcon jp-SpreadsheetIcon'
     });
 
-    app.contextMenu.addItem({
-      command: 'data-viewer:open-file',
-      selector: '.jp-DirListing-item[data-isdir="false"]',
-      rank: 10
+    // Register our factory as the default opener for all four file types.
+    // Previous defaults (text editor, JSON viewer, etc.) remain available
+    // via right-click → "Open With" automatically.
+    const factory = new DataViewerFactory({
+      name: 'Data Viewer',
+      modelName: 'text',
+      fileTypes: ['csv', 'tsv', 'json', 'parquet'],
+      defaultFor: ['csv', 'tsv', 'json', 'parquet']
     });
-
-    palette.addItem({ command: 'data-viewer:open-file', category: 'Data Viewer' });
+    app.docRegistry.addWidgetFactory(factory);
   }
 };
 

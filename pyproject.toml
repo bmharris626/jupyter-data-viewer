@@ -7,9 +7,9 @@ name = "jupyterlab-data-viewer"
 version = "0.1.0"
 description = "JupyterLab extension for viewing and querying data files"
 readme = "README.md"
-license = {text = "BSD-3-Clause"}
+license = {text = "MIT"}
 authors = [
-    {name = "JupyterLab Extension Team"},
+    {name = "Brandon Harris", email = "bmharris626@gmail.com"},
 ]
 classifiers = [
     "Framework :: Jupyter",
@@ -30,8 +30,8 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/jupyterlab/jupyterlab-data-viewer"
-Repository = "https://github.com/jupyterlab/jupyterlab-data-viewer"
+Homepage = "https://github.com/bmharris626/jupyter-data-viewer"
+Repository = "https://github.com/bmharris626/jupyter-data-viewer"
 
 [tool.setuptools.packages.find]
 where = ["src"]

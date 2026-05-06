@@ -54,4 +54,4 @@ See the sections below for architecture detail.
 
 ## License
 
-BSD-3-Clause
+MIT

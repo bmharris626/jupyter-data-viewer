@@ -26,6 +26,7 @@
   "dependencies": {
     "@jupyterlab/application": "^4.0.0",
     "@jupyterlab/apputils": "^4.0.0",
+    "@jupyterlab/docregistry": "^4.0.0",
     "@jupyterlab/filebrowser": "^4.0.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
@@ -52,7 +53,7 @@
       }
     },
     "_build": {
-      "load": "static/remoteEntry.5418ed066c66f197f376.js",
+      "load": "static/remoteEntry.ed5579d4ef8751800ca2.js",
       "extension": "./extension"
     }
   }

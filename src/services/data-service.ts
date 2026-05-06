@@ -1,9 +1,16 @@
 import { PageConfig, URLExt } from '@jupyterlab/coreutils';
 
-interface DataResponse {
+function getCookie(name: string): string | null {
+  const match = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
+export interface DataResponse {
   data: Record<string, any>[];
   columns: string[];
   total_rows: number;
+  offset?: number;
+  limit?: number;
 }
 
 export class ApiClient {
@@ -14,10 +21,13 @@ export class ApiClient {
       baseUrl ?? URLExt.join(PageConfig.getBaseUrl(), 'data-viewer');
   }
 
-  async getFileData(path: string): Promise<DataResponse> {
-    const response = await fetch(
-      `${this.baseUrl}/file?path=${encodeURIComponent(path)}`
-    );
+  async getFileData(
+    path: string,
+    offset = 0,
+    limit = 2000
+  ): Promise<DataResponse> {
+    const url = `${this.baseUrl}/file?path=${encodeURIComponent(path)}&offset=${offset}&limit=${limit}`;
+    const response = await fetch(url);
     if (!response.ok) {
       throw new Error(`Failed to fetch file data: ${response.status}`);
     }
@@ -25,9 +35,13 @@ export class ApiClient {
   }
 
   async executeQuery(path: string, query: string): Promise<DataResponse> {
+    const xsrf = getCookie('_xsrf');
     const response = await fetch(`${this.baseUrl}/query`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(xsrf ? { 'X-XSRFToken': xsrf } : {})
+      },
       body: JSON.stringify({ path, query })
     });
     if (!response.ok) {
@@ -44,8 +58,12 @@ export class DataService {
     this.apiClient = new ApiClient();
   }
 
-  async fetchFileData(path: string): Promise<DataResponse> {
-    return this.apiClient.getFileData(path);
+  async fetchFileData(
+    path: string,
+    offset = 0,
+    limit = 2000
+  ): Promise<DataResponse> {
+    return this.apiClient.getFileData(path, offset, limit);
   }
 
   async executeQuery(path: string, query: string): Promise<DataResponse> {

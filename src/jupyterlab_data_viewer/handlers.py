@@ -7,25 +7,33 @@ import tornado
 from jupyter_server.base.handlers import APIHandler
 from jupyter_server.utils import url_path_join
 
-from .data_viewer import read_data_file, execute_sql_query
+from .data_viewer import read_data_file, read_data_file_paged, execute_sql_query
+
+MAX_QUERY_ROWS = 10000
 
 
 class FileHandler(APIHandler):
     @tornado.web.authenticated
     def get(self):
-        path = self.get_argument('path')
+        rel_path = self.get_argument('path')
+        offset = int(self.get_argument('offset', '0'))
+        limit = int(self.get_argument('limit', '2000'))
+        root_dir = self.settings.get('server_root_dir', os.getcwd())
+        path = os.path.join(root_dir, rel_path)
         if not os.path.exists(path):
             raise tornado.web.HTTPError(404, 'File not found')
         try:
-            df = read_data_file(path)
+            page_df, total_rows, columns = read_data_file_paged(path, offset, limit)
         except ValueError as e:
             raise tornado.web.HTTPError(400, str(e))
         except Exception as e:
             raise tornado.web.HTTPError(500, f'Error reading file: {e}')
         self.finish(json.dumps({
-            'data': json.loads(df.to_json(orient='records')),
-            'columns': list(df.columns),
-            'total_rows': len(df),
+            'data': json.loads(page_df.to_json(orient='records')),
+            'columns': columns,
+            'total_rows': total_rows,
+            'offset': offset,
+            'limit': limit,
         }))
 
 
@@ -33,8 +41,10 @@ class QueryHandler(APIHandler):
     @tornado.web.authenticated
     def post(self):
         body = self.get_json_body()
-        path = body.get('path', '')
+        rel_path = body.get('path', '')
         query = body.get('query', '')
+        root_dir = self.settings.get('server_root_dir', os.getcwd())
+        path = os.path.join(root_dir, rel_path)
         if not os.path.exists(path):
             raise tornado.web.HTTPError(404, 'File not found')
         try:
@@ -44,8 +54,9 @@ class QueryHandler(APIHandler):
             raise tornado.web.HTTPError(400, str(e))
         except Exception as e:
             raise tornado.web.HTTPError(500, f'Error executing query: {e}')
+        capped = result_df.head(MAX_QUERY_ROWS)
         self.finish(json.dumps({
-            'data': json.loads(result_df.to_json(orient='records')),
+            'data': json.loads(capped.to_json(orient='records')),
             'columns': list(result_df.columns),
             'total_rows': len(result_df),
         }))
