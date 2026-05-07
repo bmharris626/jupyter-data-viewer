@@ -18,9 +18,9 @@ class FileHandler(APIHandler):
         rel_path = self.get_argument('path')
         offset = int(self.get_argument('offset', '0'))
         limit = int(self.get_argument('limit', '2000'))
-        root_dir = self.settings.get('server_root_dir', os.getcwd())
-        path = os.path.join(root_dir, rel_path)
-        if not os.path.exists(path):
+        root_dir = self.settings.get('root_dir') or self.settings.get('server_root_dir') or os.getcwd()
+        path = os.path.realpath(os.path.join(root_dir, rel_path))
+        if not os.path.isfile(path):
             raise tornado.web.HTTPError(404, 'File not found')
         try:
             page_df, total_rows, columns = read_data_file_paged(path, offset, limit)
@@ -43,9 +43,9 @@ class QueryHandler(APIHandler):
         body = self.get_json_body()
         rel_path = body.get('path', '')
         query = body.get('query', '')
-        root_dir = self.settings.get('server_root_dir', os.getcwd())
-        path = os.path.join(root_dir, rel_path)
-        if not os.path.exists(path):
+        root_dir = self.settings.get('root_dir') or self.settings.get('server_root_dir') or os.getcwd()
+        path = os.path.realpath(os.path.join(root_dir, rel_path))
+        if not os.path.isfile(path):
             raise tornado.web.HTTPError(404, 'File not found')
         try:
             df = read_data_file(path)
