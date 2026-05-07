@@ -2,6 +2,13 @@
   "name": "jupyterlab-data-viewer",
   "version": "0.1.0",
   "description": "JupyterLab extension for viewing and querying data files",
+  "license": "MIT",
+  "author": "Brandon Harris <bmharris626@gmail.com>",
+  "homepage": "https://github.com/bmharris626/jupyter-data-viewer",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bmharris626/jupyter-data-viewer.git"
+  },
   "main": "lib/index.js",
   "files": [
     "lib/**/*",
@@ -53,7 +60,7 @@
       }
     },
     "_build": {
-      "load": "static/remoteEntry.ed5579d4ef8751800ca2.js",
+      "load": "static/remoteEntry.dadd72c20fdeef251924.js",
       "extension": "./extension"
     }
   }

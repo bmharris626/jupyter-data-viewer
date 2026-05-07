@@ -21,16 +21,27 @@ const plugin: JupyterFrontEndPlugin<void> = {
       iconClass: 'jp-MaterialIcon jp-SpreadsheetIcon'
     });
 
-    // Register our factory as the default opener for all four file types.
-    // Previous defaults (text editor, JSON viewer, etc.) remain available
-    // via right-click → "Open With" automatically.
-    const factory = new DataViewerFactory({
+    // Two factories are needed because Parquet is binary (modelName: 'base64')
+    // while CSV/TSV/JSON are text.  Using 'text' for Parquet causes the
+    // ContentsManager to reject it with a UTF-8 decode error before our widget
+    // ever opens.  The widget itself ignores the model content entirely — it
+    // fetches data via our own API — so the model type only matters for the
+    // initial ContentsManager read.
+    const textFactory = new DataViewerFactory({
       name: 'Data Viewer',
       modelName: 'text',
-      fileTypes: ['csv', 'tsv', 'json', 'parquet'],
-      defaultFor: ['csv', 'tsv', 'json', 'parquet']
+      fileTypes: ['csv', 'tsv', 'json'],
+      defaultFor: ['csv', 'tsv', 'json']
     });
-    app.docRegistry.addWidgetFactory(factory);
+    app.docRegistry.addWidgetFactory(textFactory);
+
+    const binaryFactory = new DataViewerFactory({
+      name: 'Data Viewer (binary)',
+      modelName: 'base64',
+      fileTypes: ['parquet'],
+      defaultFor: ['parquet']
+    });
+    app.docRegistry.addWidgetFactory(binaryFactory);
   }
 };
 
