@@ -15,27 +15,38 @@ MAX_QUERY_ROWS = 10000
 def _resolve_path(handler, rel_path):
     """Return the absolute, symlink-resolved path for a relative path from the client.
 
+    Uses the same path resolution as Jupyter's built-in editor: if the
+    ContentsManager exposes _get_os_path(), delegate to it so our logic is
+    identical to the regular file-open path.  Falls back to manual joining
+    for non-FileContentsManager backends, stripping any leading slash so that
+    os.path.join() cannot discard root_dir.
+
     Raises HTTPError 404 with diagnostic detail if the resolved path is not a file.
     """
-    root_dir = (
-        getattr(handler.contents_manager, 'root_dir', None)
-        or handler.settings.get('root_dir')
-        or handler.settings.get('server_root_dir')
-        or os.getcwd()
-    )
-    root_dir = os.path.expanduser(root_dir)
-    raw = os.path.join(root_dir, rel_path)
+    cm = handler.contents_manager
+
+    if hasattr(cm, '_get_os_path'):
+        raw = cm._get_os_path(rel_path)
+    else:
+        root_dir = (
+            getattr(cm, 'root_dir', None)
+            or handler.settings.get('root_dir')
+            or handler.settings.get('server_root_dir')
+            or os.getcwd()
+        )
+        root_dir = os.path.expanduser(root_dir)
+        raw = os.path.join(root_dir, rel_path.lstrip('/'))
+
     path = os.path.realpath(raw)
 
     if not os.path.isfile(path):
         diag = {
-            'root_dir': root_dir,
             'rel': rel_path,
             'raw': raw,
             'realpath': path,
-            'lexists': os.path.lexists(raw),   # symlink itself present?
-            'exists': os.path.exists(raw),      # target reachable?
-            'isfile_raw': os.path.isfile(raw),  # file via symlink?
+            'lexists': os.path.lexists(raw),
+            'exists': os.path.exists(raw),
+            'isfile_raw': os.path.isfile(raw),
             'isfile_real': os.path.isfile(path),
         }
         raise tornado.web.HTTPError(404, f'File not found — diagnostics: {diag}')
