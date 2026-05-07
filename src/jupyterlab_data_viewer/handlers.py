@@ -18,10 +18,15 @@ class FileHandler(APIHandler):
         rel_path = self.get_argument('path')
         offset = int(self.get_argument('offset', '0'))
         limit = int(self.get_argument('limit', '2000'))
-        root_dir = self.settings.get('root_dir') or self.settings.get('server_root_dir') or os.getcwd()
+        root_dir = (
+            getattr(self.contents_manager, 'root_dir', None)
+            or self.settings.get('root_dir')
+            or self.settings.get('server_root_dir')
+            or os.getcwd()
+        )
         path = os.path.realpath(os.path.join(root_dir, rel_path))
         if not os.path.isfile(path):
-            raise tornado.web.HTTPError(404, 'File not found')
+            raise tornado.web.HTTPError(404, f'File not found: {path} (root_dir={root_dir}, rel={rel_path})')
         try:
             page_df, total_rows, columns = read_data_file_paged(path, offset, limit)
         except ValueError as e:
@@ -43,10 +48,15 @@ class QueryHandler(APIHandler):
         body = self.get_json_body()
         rel_path = body.get('path', '')
         query = body.get('query', '')
-        root_dir = self.settings.get('root_dir') or self.settings.get('server_root_dir') or os.getcwd()
+        root_dir = (
+            getattr(self.contents_manager, 'root_dir', None)
+            or self.settings.get('root_dir')
+            or self.settings.get('server_root_dir')
+            or os.getcwd()
+        )
         path = os.path.realpath(os.path.join(root_dir, rel_path))
         if not os.path.isfile(path):
-            raise tornado.web.HTTPError(404, 'File not found')
+            raise tornado.web.HTTPError(404, f'File not found: {path} (root_dir={root_dir}, rel={rel_path})')
         try:
             df = read_data_file(path)
             result_df = execute_sql_query(df, query)
