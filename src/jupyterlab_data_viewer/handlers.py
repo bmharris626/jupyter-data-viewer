@@ -42,6 +42,8 @@ def _resolve_path(handler, rel_path):
     if not os.path.isfile(path):
         diag = {
             'rel': rel_path,
+            'cm_class': type(cm).__name__,
+            'cm_root_dir': getattr(cm, 'root_dir', '<unset>'),
             'raw': raw,
             'realpath': path,
             'lexists': os.path.lexists(raw),

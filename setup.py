@@ -13,6 +13,10 @@ def collect_data_files():
         sources = [os.path.join(dirpath, f) for f in filenames]
         if sources:
             pairs.append((dest, sources))
+    pairs.append((
+        "etc/jupyter/jupyter_server_config.d",
+        ["jupyter-config/jupyter_server_config.d/jupyterlab_data_viewer.json"],
+    ))
     return pairs
 
 
