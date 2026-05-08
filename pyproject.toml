@@ -33,9 +33,6 @@ dev = [
 Homepage = "https://github.com/bmharris626/jupyter-data-viewer"
 Repository = "https://github.com/bmharris626/jupyter-data-viewer"
 
-[project.entry-points."jupyter_serverextension_points"]
-jupyterlab_data_viewer = "jupyterlab_data_viewer"
-
 [tool.setuptools.packages.find]
 where = ["src"]
 
@@ -44,3 +41,6 @@ where = ["src"]
 
 [tool.setuptools.package-data]
 jupyterlab_data_viewer = ["labextension/**"]
+
+[tool.setuptools.data-files]
+"etc/jupyter/jupyter_server_config.d" = ["jupyter-config/jupyter_server_config.d/jupyterlab_data_viewer.json"]
