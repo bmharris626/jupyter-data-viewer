@@ -1,46 +1,84 @@
 [build-system]
-requires = ["setuptools>=64", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling>=1.5.0", "jupyterlab>=4.0.0,<5", "hatch-nodejs-version>=0.3.2"]
+build-backend = "hatchling.build"
 
 [project]
 name = "jupyterlab-data-viewer"
-version = "0.1.0"
-description = "JupyterLab extension for viewing and querying data files"
 readme = "README.md"
-license = {text = "MIT"}
-authors = [
-    {name = "Brandon Harris", email = "bmharris626@gmail.com"},
-]
+license = { file = "LICENSE" }
+requires-python = ">=3.9"
 classifiers = [
     "Framework :: Jupyter",
+    "Framework :: Jupyter :: JupyterLab",
+    "Framework :: Jupyter :: JupyterLab :: 4",
+    "Framework :: Jupyter :: JupyterLab :: Extensions",
+    "Framework :: Jupyter :: JupyterLab :: Extensions :: Prebuilt",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
 ]
 dependencies = [
-    "jupyterlab>=4.0.0",
-    "jupyter_server>=2.0.0",
+    "jupyter_server>=2.0.0,<3",
     "pandas>=1.5.0",
     "pyarrow>=10.0.0",
     "duckdb>=0.7.0",
 ]
-requires-python = ">=3.9"
+dynamic = ["version", "description", "authors", "urls", "keywords"]
 
 [project.optional-dependencies]
 dev = [
+    "jupyterlab>=4",
     "pytest>=6.0",
     "pytest-cov>=2.10",
 ]
 
-[project.urls]
-Homepage = "https://github.com/bmharris626/jupyter-data-viewer"
-Repository = "https://github.com/bmharris626/jupyter-data-viewer"
+[tool.hatch.version]
+source = "nodejs"
 
-[tool.setuptools.packages.find]
-where = ["src"]
+[tool.hatch.metadata.hooks.nodejs]
+fields = ["description", "authors", "urls", "keywords"]
 
-[tool.setuptools.package-dir]
-"" = "src"
+[tool.hatch.build.targets.sdist]
+artifacts = ["jupyterlab_data_viewer/labextension"]
+exclude = [".github"]
 
-[tool.setuptools.package-data]
-jupyterlab_data_viewer = ["labextension/**"]
+[tool.hatch.build.targets.wheel.shared-data]
+"jupyterlab_data_viewer/labextension" = "share/jupyter/labextensions/jupyterlab-data-viewer"
+"install.json" = "share/jupyter/labextensions/jupyterlab-data-viewer/install.json"
+"jupyter-config/jupyter_server_config.d" = "etc/jupyter/jupyter_server_config.d"
 
-[tool.setuptools.data-files]
-"etc/jupyter/jupyter_server_config.d" = ["jupyter-config/jupyter_server_config.d/jupyterlab_data_viewer.json"]
+[tool.hatch.build.hooks.version]
+path = "jupyterlab_data_viewer/_version.py"
+
+[tool.hatch.build.hooks.jupyter-builder]
+dependencies = ["hatch-jupyter-builder>=0.5"]
+build-function = "hatch_jupyter_builder.npm_builder"
+ensured-targets = [
+    "jupyterlab_data_viewer/labextension/static/style.js",
+    "jupyterlab_data_viewer/labextension/package.json",
+]
+skip-if-exists = ["jupyterlab_data_viewer/labextension/static/style.js"]
+
+[tool.hatch.build.hooks.jupyter-builder.build-kwargs]
+build_cmd = "build:prod"
+npm = ["jlpm"]
+
+[tool.hatch.build.hooks.jupyter-builder.editable-build-kwargs]
+build_cmd = "install:extension"
+npm = ["jlpm"]
+source_dir = "src"
+build_dir = "jupyterlab_data_viewer/labextension"
+
+[tool.jupyter-releaser.options]
+version_cmd = "hatch version"
+
+[tool.jupyter-releaser.hooks]
+before-build-npm = [
+    "python -m pip install 'jupyterlab>=4.0.0,<5'",
+    "jlpm",
+    "jlpm build:prod"
+]
+before-build-python = ["jlpm clean:all"]
+
+[tool.check-wheel-contents]
+ignore = ["W002"]
