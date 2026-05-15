@@ -12,7 +12,7 @@
   "main": "lib/index.js",
   "files": [
     "lib/**/*",
-    "src/jupyterlab_data_viewer/labextension/**"
+    "jupyterlab_data_viewer/labextension/**"
   ],
   "keywords": [
     "jupyter",
@@ -23,10 +23,13 @@
     "build": "jlpm build:lib && jlpm build:labextension",
     "build:lib": "tsc -p tsconfig.json",
     "build:labextension": "jupyter labextension build .",
+    "build:prod": "jlpm clean && jlpm build:lib && jlpm build:labextension",
+    "install:extension": "jupyter labextension develop --overwrite .",
     "dev": "jlpm build:lib --watch",
     "clean": "jlpm clean:lib && jlpm clean:labextension",
+    "clean:all": "jlpm clean",
     "clean:lib": "rm -rf lib",
-    "clean:labextension": "rm -rf src/jupyterlab_data_viewer/labextension",
+    "clean:labextension": "rm -rf jupyterlab_data_viewer/labextension",
     "prepublishOnly": "jlpm build",
     "test": "jest"
   },
@@ -52,7 +55,7 @@
   },
   "jupyterlab": {
     "extension": true,
-    "outputDir": "src/jupyterlab_data_viewer/labextension",
+    "outputDir": "jupyterlab_data_viewer/labextension",
     "discovery": {
       "server": {
         "name": "jupyterlab-data-viewer",
@@ -60,7 +63,7 @@
       }
     },
     "_build": {
-      "load": "static/remoteEntry.dadd72c20fdeef251924.js",
+      "load": "static/remoteEntry.0c7cd9432afecee1d58c.js",
       "extension": "./extension"
     }
   }

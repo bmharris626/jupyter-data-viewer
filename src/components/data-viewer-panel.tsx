@@ -1,9 +1,10 @@
-import { useState, useRef, CSSProperties } from 'react';
+import { useState, CSSProperties } from 'react';
 import { DataTable } from './data-table';
 import { DataResponse } from '../services/data-service';
 
 const PAGE_SIZES = [500, 1000, 2000, 5000];
 const DEFAULT_PAGE_SIZE = 2000;
+const FILTER_TAB_ID = 'filter';
 
 interface Tab {
   id: string;
@@ -51,11 +52,12 @@ const DataViewerPanel: React.FC<IDataViewerProps> = ({
   ]);
   const [activeTabId, setActiveTabId] = useState('original');
   const [showModal, setShowModal] = useState(false);
-  const [query, setQuery] = useState('SELECT * FROM df LIMIT 100');
+  const [whereClause, setWhereClause] = useState('');
   const [isExecuting, setIsExecuting] = useState(false);
   const [queryError, setQueryError] = useState<string | null>(null);
   const [isFetchingPage, setIsFetchingPage] = useState(false);
-  const queryCountRef = useRef(0);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [hiddenColumns, setHiddenColumns] = useState<Set<string>>(new Set());
 
   const openModal = () => {
     setQueryError(null);
@@ -63,22 +65,41 @@ const DataViewerPanel: React.FC<IDataViewerProps> = ({
   };
   const closeModal = () => setShowModal(false);
 
+  const toggleColumn = (col: string) => {
+    setHiddenColumns(prev => {
+      const next = new Set(prev);
+      if (next.has(col)) next.delete(col);
+      else next.add(col);
+      return next;
+    });
+  };
+
+  const toggleAllColumns = (allCols: string[]) => {
+    setHiddenColumns(
+      hiddenColumns.size === 0 ? new Set(allCols) : new Set()
+    );
+  };
+
   const handleExecute = async () => {
-    if (!query.trim() || isExecuting || !onExecuteQuery) return;
+    if (!whereClause.trim() || isExecuting || !onExecuteQuery) return;
     setIsExecuting(true);
     setQueryError(null);
     try {
-      const result = await onExecuteQuery(query);
-      queryCountRef.current += 1;
-      const newId = 'query-' + queryCountRef.current;
-      const newTab: Tab = {
-        id: newId,
-        label: 'Query ' + queryCountRef.current,
+      const result = await onExecuteQuery(
+        `SELECT * FROM df WHERE ${whereClause.trim()}`
+      );
+      const filterTab: Tab = {
+        id: FILTER_TAB_ID,
+        label: 'Filter',
         data: result.data,
         columns: result.columns
       };
-      setTabs(prev => [...prev, newTab]);
-      setActiveTabId(newId);
+      setTabs(prev =>
+        prev.some(t => t.id === FILTER_TAB_ID)
+          ? prev.map(t => (t.id === FILTER_TAB_ID ? filterTab : t))
+          : [...prev, filterTab]
+      );
+      setActiveTabId(FILTER_TAB_ID);
       closeModal();
     } catch (err) {
       setQueryError(err instanceof Error ? err.message : String(err));
@@ -155,16 +176,12 @@ const DataViewerPanel: React.FC<IDataViewerProps> = ({
   };
 
   const activeTab = tabs.find(t => t.id === activeTabId) ?? tabs[0];
+  const allColumns = activeTab?.columns ?? [];
+  const visibleColumns = allColumns.filter(c => !hiddenColumns.has(c));
 
   if (loading) {
     return (
-      <div
-        style={{
-          ...s.root,
-          alignItems: 'center',
-          justifyContent: 'center'
-        }}
-      >
+      <div style={{ ...s.root, alignItems: 'center', justifyContent: 'center' }}>
         Loading {filePath}...
       </div>
     );
@@ -185,8 +202,7 @@ const DataViewerPanel: React.FC<IDataViewerProps> = ({
   }
 
   const showPagination =
-    activeTab?.isPaginated &&
-    (activeTab.totalRows ?? 0) > 0;
+    activeTab?.isPaginated && (activeTab.totalRows ?? 0) > 0;
   const offset = activeTab?.offset ?? 0;
   const pageSize = activeTab?.pageSize ?? DEFAULT_PAGE_SIZE;
   const totalRows = activeTab?.totalRows ?? 0;
@@ -200,15 +216,26 @@ const DataViewerPanel: React.FC<IDataViewerProps> = ({
       {/* Header */}
       <div style={s.header}>
         <span style={s.headerTitle}>{filePath}</span>
-        {onExecuteQuery && (
+        <div style={s.headerButtons}>
+          {onExecuteQuery && (
+            <button onClick={openModal} style={s.filterButton} title="Filter rows">
+              Filter
+            </button>
+          )}
           <button
-            onClick={openModal}
-            style={s.sqlButton}
-            title="Open SQL query editor"
+            onClick={() => setSidebarOpen(o => !o)}
+            style={{
+              ...s.columnsButton,
+              ...(sidebarOpen ? s.columnsButtonActive : {})
+            }}
+            title="Toggle column visibility"
           >
-            SQL Query
+            Columns
+            {hiddenColumns.size > 0 && (
+              <span style={s.hiddenBadge}>{hiddenColumns.size}</span>
+            )}
           </button>
-        )}
+        </div>
       </div>
 
       {/* Tab bar */}
@@ -236,47 +263,103 @@ const DataViewerPanel: React.FC<IDataViewerProps> = ({
         ))}
       </div>
 
-      {/* Data area */}
-      <div style={s.dataArea}>
-        {isFetchingPage ? (
-          <div style={s.fetchingOverlay}>Loading…</div>
-        ) : (
-          activeTab && (
-            <DataTable data={activeTab.data} columns={activeTab.columns} />
-          )
+      {/* Main area: sidebar + data */}
+      <div style={s.mainArea}>
+        {/* Sidebar */}
+        {sidebarOpen && (
+          <aside style={s.sidebar}>
+            <div style={s.sidebarHeader}>
+              <span style={s.sidebarTitle}>Columns</span>
+              <span style={s.sidebarCount}>
+                {visibleColumns.length}/{allColumns.length}
+              </span>
+              <button
+                style={s.sidebarToggleAll}
+                onClick={() => toggleAllColumns(allColumns)}
+                title={hiddenColumns.size === 0 ? 'Deselect all' : 'Select all'}
+              >
+                {hiddenColumns.size === 0 ? 'Deselect all' : 'Select all'}
+              </button>
+              <button
+                style={s.sidebarClose}
+                onClick={() => setSidebarOpen(false)}
+                title="Close"
+              >
+                ×
+              </button>
+            </div>
+            <div style={s.variableList}>
+              {allColumns.map(col => {
+                const visible = !hiddenColumns.has(col);
+                return (
+                  <label
+                    key={col}
+                    style={{
+                      ...s.variable,
+                      opacity: visible ? 1 : 0.45
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={visible}
+                      onChange={() => toggleColumn(col)}
+                      style={s.checkbox}
+                    />
+                    <span style={s.variableName}>{col}</span>
+                  </label>
+                );
+              })}
+            </div>
+          </aside>
         )}
+
+        {/* Data area */}
+        <div style={s.dataArea}>
+          {isFetchingPage ? (
+            <div style={s.fetchingOverlay}>Loading…</div>
+          ) : (
+            activeTab && (
+              <DataTable data={activeTab.data} columns={visibleColumns} />
+            )
+          )}
+        </div>
       </div>
 
-      {/* Pagination bar — only shown for the paginated original tab */}
+      {/* Pagination bar */}
       {showPagination && (
         <div style={s.paginationBar}>
-          <button
-            onClick={() => navigatePage(activeTab, offset - pageSize)}
-            disabled={!hasPrev || isFetchingPage}
-            style={{
-              ...s.pageButton,
-              opacity: !hasPrev || isFetchingPage ? 0.4 : 1,
-              cursor: !hasPrev || isFetchingPage ? 'not-allowed' : 'pointer'
-            }}
-          >
-            ← Prev
-          </button>
+          <div style={s.navGroup}>
+            <button
+              onClick={() => navigatePage(activeTab, offset - pageSize)}
+              disabled={!hasPrev || isFetchingPage}
+              style={{
+                ...s.navButton,
+                opacity: !hasPrev || isFetchingPage ? 0.3 : 1,
+                cursor: !hasPrev || isFetchingPage ? 'not-allowed' : 'pointer'
+              }}
+              title="Previous page"
+            >
+              ‹
+            </button>
+            <div style={s.navDivider} />
+            <button
+              onClick={() => navigatePage(activeTab, offset + pageSize)}
+              disabled={!hasNext || isFetchingPage}
+              style={{
+                ...s.navButton,
+                opacity: !hasNext || isFetchingPage ? 0.3 : 1,
+                cursor: !hasNext || isFetchingPage ? 'not-allowed' : 'pointer'
+              }}
+              title="Next page"
+            >
+              ›
+            </button>
+          </div>
           <span style={s.pageInfo}>
             {totalRows === 0
               ? 'No rows'
               : `Rows ${startRow.toLocaleString()}–${endRow.toLocaleString()} of ${totalRows.toLocaleString()}`}
           </span>
-          <button
-            onClick={() => navigatePage(activeTab, offset + pageSize)}
-            disabled={!hasNext || isFetchingPage}
-            style={{
-              ...s.pageButton,
-              opacity: !hasNext || isFetchingPage ? 0.4 : 1,
-              cursor: !hasNext || isFetchingPage ? 'not-allowed' : 'pointer'
-            }}
-          >
-            Next →
-          </button>
           <select
             value={pageSize}
             onChange={e => changePageSize(activeTab, Number(e.target.value))}
@@ -293,48 +376,46 @@ const DataViewerPanel: React.FC<IDataViewerProps> = ({
         </div>
       )}
 
-      {/* SQL modal */}
+      {/* Filter modal */}
       {showModal && (
         <>
           <div onClick={closeModal} style={s.backdrop} />
           <div style={s.modal}>
             <div style={s.modalHeader}>
-              <span style={s.modalTitle}>SQL Query</span>
+              <span style={s.modalTitle}>Filter</span>
               <button onClick={closeModal} style={s.modalClose} title="Close">
                 ×
               </button>
             </div>
             <div style={s.modalBody}>
               <textarea
-                value={query}
-                onChange={e => setQuery(e.target.value)}
+                value={whereClause}
+                onChange={e => setWhereClause(e.target.value)}
                 onKeyDown={handleKeyDown}
-                rows={6}
+                rows={3}
                 spellCheck={false}
                 autoFocus
-                placeholder="SELECT * FROM df LIMIT 100"
+                placeholder="age > 30 AND status = 'active'"
                 style={s.queryTextarea}
               />
               <div style={s.modalFooter}>
                 <span style={s.queryHint}>
-                  Table alias: df · Ctrl+Enter to run
+                  WHERE clause — =, !=, &lt;, &gt;, AND, OR, NOT, LIKE · Ctrl+Enter to run
                 </span>
                 <button
                   onClick={handleExecute}
-                  disabled={isExecuting || !query.trim()}
+                  disabled={isExecuting || !whereClause.trim()}
                   style={{
                     ...s.executeButton,
-                    opacity: isExecuting || !query.trim() ? 0.55 : 1,
+                    opacity: isExecuting || !whereClause.trim() ? 0.55 : 1,
                     cursor:
-                      isExecuting || !query.trim() ? 'not-allowed' : 'pointer'
+                      isExecuting || !whereClause.trim() ? 'not-allowed' : 'pointer'
                   }}
                 >
-                  {isExecuting ? 'Running…' : 'Execute'}
+                  {isExecuting ? 'Running…' : 'Apply'}
                 </button>
               </div>
-              {queryError && (
-                <div style={s.queryError}>{queryError}</div>
-              )}
+              {queryError && <div style={s.queryError}>{queryError}</div>}
             </div>
           </div>
         </>
@@ -373,20 +454,58 @@ const s: Record<string, CSSProperties> = {
     color: 'var(--jp-ui-font-color1, #111)',
     overflow: 'hidden',
     textOverflow: 'ellipsis',
-    whiteSpace: 'nowrap'
+    whiteSpace: 'nowrap',
+    flex: 1
   },
-  sqlButton: {
+  headerButtons: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    flexShrink: 0
+  },
+  filterButton: {
     padding: '4px 12px',
     fontSize: '11px',
     fontWeight: 600,
     letterSpacing: '0.03em',
     whiteSpace: 'nowrap',
-    flexShrink: 0,
     backgroundColor: 'var(--jp-brand-color1, #1976d2)',
     color: '#fff',
     border: 'none',
     borderRadius: '4px',
     cursor: 'pointer'
+  },
+  columnsButton: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '5px',
+    padding: '4px 10px',
+    fontSize: '11px',
+    fontWeight: 600,
+    letterSpacing: '0.03em',
+    whiteSpace: 'nowrap',
+    backgroundColor: 'var(--jp-layout-color1, #fff)',
+    color: 'var(--jp-ui-font-color1, #111)',
+    border: '1px solid var(--jp-border-color1, #e0e0e0)',
+    borderRadius: '4px',
+    cursor: 'pointer'
+  },
+  columnsButtonActive: {
+    backgroundColor: 'var(--jp-layout-color3, #e0e0e0)',
+    borderColor: 'var(--jp-border-color0, #bbb)'
+  },
+  hiddenBadge: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: '16px',
+    height: '16px',
+    padding: '0 4px',
+    fontSize: '10px',
+    fontWeight: 700,
+    borderRadius: '8px',
+    backgroundColor: 'var(--jp-warn-color1, #f57c00)',
+    color: '#fff'
   },
   tabBar: {
     display: 'flex',
@@ -424,6 +543,89 @@ const s: Record<string, CSSProperties> = {
     marginLeft: '2px',
     padding: '0 1px'
   },
+  mainArea: {
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'row',
+    overflow: 'hidden'
+  },
+  sidebar: {
+    width: '220px',
+    flexShrink: 0,
+    display: 'flex',
+    flexDirection: 'column',
+    borderRight: '1px solid var(--jp-border-color1, #e0e0e0)',
+    backgroundColor: 'var(--jp-layout-color1, #fff)',
+    overflow: 'hidden'
+  },
+  sidebarHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    padding: '7px 10px',
+    flexShrink: 0,
+    backgroundColor: 'var(--jp-layout-color2, #f5f5f5)',
+    borderBottom: '1px solid var(--jp-border-color1, #e0e0e0)'
+  },
+  sidebarTitle: {
+    fontSize: '11px',
+    fontWeight: 700,
+    letterSpacing: '0.04em',
+    textTransform: 'uppercase',
+    color: 'var(--jp-ui-font-color1, #111)'
+  },
+  sidebarCount: {
+    fontSize: '11px',
+    color: 'var(--jp-ui-font-color2, #666)',
+    flex: 1
+  },
+  sidebarToggleAll: {
+    fontSize: '10px',
+    padding: '2px 6px',
+    border: '1px solid var(--jp-border-color1, #e0e0e0)',
+    borderRadius: '3px',
+    backgroundColor: 'var(--jp-layout-color1, #fff)',
+    color: 'var(--jp-ui-font-color2, #555)',
+    cursor: 'pointer',
+    whiteSpace: 'nowrap'
+  },
+  sidebarClose: {
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    fontSize: '16px',
+    lineHeight: '1',
+    padding: '0 2px',
+    opacity: 0.5,
+    color: 'var(--jp-ui-font-color1, #111)',
+    flexShrink: 0
+  },
+  variableList: {
+    flex: 1,
+    overflowY: 'auto',
+    padding: '4px 0'
+  },
+  variable: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    padding: '4px 10px',
+    cursor: 'pointer',
+    transition: 'background 0.1s'
+  },
+  checkbox: {
+    flexShrink: 0,
+    accentColor: 'var(--jp-brand-color1, #1976d2)',
+    cursor: 'pointer'
+  },
+  variableName: {
+    fontSize: '12px',
+    fontFamily: 'var(--jp-code-font-family, monospace)',
+    color: 'var(--jp-ui-font-color1, #111)',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap'
+  },
   dataArea: {
     flex: 1,
     overflow: 'auto',
@@ -448,14 +650,28 @@ const s: Record<string, CSSProperties> = {
     borderTop: '1px solid var(--jp-border-color1, #e0e0e0)',
     fontSize: '12px'
   },
-  pageButton: {
-    padding: '3px 10px',
-    fontSize: '12px',
-    backgroundColor: 'var(--jp-layout-color1, #fff)',
-    color: 'var(--jp-ui-font-color1, #111)',
+  navGroup: {
+    display: 'flex',
     border: '1px solid var(--jp-border-color1, #e0e0e0)',
-    borderRadius: '3px',
-    cursor: 'pointer'
+    borderRadius: '4px',
+    overflow: 'hidden',
+    backgroundColor: 'var(--jp-layout-color0, #fafafa)',
+    flexShrink: 0
+  },
+  navButton: {
+    background: 'none',
+    border: 'none',
+    padding: '3px 10px',
+    fontSize: '15px',
+    lineHeight: '1',
+    color: 'var(--jp-ui-font-color1, #111)',
+    cursor: 'pointer',
+    userSelect: 'none'
+  },
+  navDivider: {
+    width: '1px',
+    backgroundColor: 'var(--jp-border-color1, #e0e0e0)',
+    flexShrink: 0
   },
   pageInfo: {
     flex: 1,
@@ -487,7 +703,7 @@ const s: Record<string, CSSProperties> = {
     top: '50%',
     left: '50%',
     transform: 'translate(-50%, -50%)',
-    width: 'min(580px, 90%)',
+    width: 'min(520px, 90%)',
     backgroundColor: 'var(--jp-layout-color1, #fff)',
     border: '1px solid var(--jp-border-color1, #e0e0e0)',
     borderRadius: '6px',
@@ -529,8 +745,7 @@ const s: Record<string, CSSProperties> = {
   queryTextarea: {
     width: '100%',
     boxSizing: 'border-box',
-    fontFamily:
-      'var(--jp-code-font-family, "Source Code Pro", monospace)',
+    fontFamily: 'var(--jp-code-font-family, "Source Code Pro", monospace)',
     fontSize: '13px',
     lineHeight: '1.5',
     padding: '10px',
@@ -544,12 +759,14 @@ const s: Record<string, CSSProperties> = {
   modalFooter: {
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'space-between'
+    justifyContent: 'space-between',
+    gap: '12px'
   },
   queryHint: {
     fontSize: '11px',
     color: 'var(--jp-ui-font-color3, #999)',
-    fontFamily: 'var(--jp-code-font-family, monospace)'
+    fontFamily: 'var(--jp-code-font-family, monospace)',
+    flex: 1
   },
   executeButton: {
     padding: '6px 18px',
@@ -558,7 +775,8 @@ const s: Record<string, CSSProperties> = {
     backgroundColor: 'var(--jp-brand-color1, #1976d2)',
     color: '#fff',
     border: 'none',
-    borderRadius: '4px'
+    borderRadius: '4px',
+    flexShrink: 0
   },
   queryError: {
     padding: '8px 12px',
