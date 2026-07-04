@@ -20,7 +20,7 @@ lib/
 *.tsbuildinfo
 
 # labextension build artifacts (webpack bundles and remoteEntry)
-labextension/static/
+*/labextension/static/
 
 # Testing
 coverage/
