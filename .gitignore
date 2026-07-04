@@ -19,8 +19,8 @@ package-lock.json
 lib/
 *.tsbuildinfo
 
-# Top-level labextension build dir (not the one bundled inside the Python package)
-/labextension/
+# labextension build artifacts (webpack bundles and remoteEntry)
+labextension/static/
 
 # Testing
 coverage/
