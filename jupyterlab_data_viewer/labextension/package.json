@@ -38,6 +38,7 @@
     "@jupyterlab/apputils": "^4.0.0",
     "@jupyterlab/docregistry": "^4.0.0",
     "@jupyterlab/filebrowser": "^4.0.0",
+    "@jupyterlab/services": "^7.0.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },
@@ -63,7 +64,7 @@
       }
     },
     "_build": {
-      "load": "static/remoteEntry.3dd9246da679f8084a68.js",
+      "load": "static/remoteEntry.ab1ac37e02787e9234a8.js",
       "extension": "./extension"
     }
   }

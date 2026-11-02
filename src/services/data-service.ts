@@ -1,9 +1,5 @@
 import { PageConfig, URLExt } from '@jupyterlab/coreutils';
-
-function getCookie(name: string): string | null {
-  const match = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
-  return match ? decodeURIComponent(match[1]) : null;
-}
+import { ServerConnection } from '@jupyterlab/services';
 
 export interface DataResponse {
   data: Record<string, any>[];
@@ -27,7 +23,11 @@ export class ApiClient {
     limit = 2000
   ): Promise<DataResponse> {
     const url = `${this.baseUrl}/file?path=${encodeURIComponent(path)}&offset=${offset}&limit=${limit}`;
-    const response = await fetch(url);
+    const response = await ServerConnection.makeRequest(
+      url,
+      {},
+      ServerConnection.makeSettings()
+    );
     if (!response.ok) {
       throw new Error(`Failed to fetch file data: ${response.status}`);
     }
@@ -35,15 +35,15 @@ export class ApiClient {
   }
 
   async executeQuery(path: string, query: string): Promise<DataResponse> {
-    const xsrf = getCookie('_xsrf');
-    const response = await fetch(`${this.baseUrl}/query`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(xsrf ? { 'X-XSRFToken': xsrf } : {})
+    const response = await ServerConnection.makeRequest(
+      `${this.baseUrl}/query`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path, query })
       },
-      body: JSON.stringify({ path, query })
-    });
+      ServerConnection.makeSettings()
+    );
     if (!response.ok) {
       throw new Error(`Failed to execute query: ${response.status}`);
     }
